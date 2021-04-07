@@ -7,9 +7,8 @@ data class TodoDataBase(
 ) {
 
     fun init() {
+        this.index = 0
         this.todoList = mutableListOf() //초기화
         println("[DEBUG] todo database init")
     }
-
-
 }

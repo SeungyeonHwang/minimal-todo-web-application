@@ -1,35 +1,68 @@
 package com.example.todo.controller.api.todo
 
 import com.example.todo.model.http.TodoDto
+import com.example.todo.service.TodoService
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import javax.validation.Valid
 
 @RestController
 @RequestMapping("/api/todo")
-class TodoApiController {
+class TodoApiController(
 
-    // R
+    //주입 받는다
+    val todoService: TodoService
+) {
+
+    // 없으면 전체조회, 있으면 단건 조회, required -> 필수값 아닌지 정하기, Optional이므로 Valid할 필요 없다.
+    // Read(One)
     @GetMapping(path = [""])
-    fun read(@RequestParam(required = false) index: Int?) { // 없으면 전체조회, 있으면 단건 조회, required -> 필수값 아닌지 정하기, Optional이므로 Valid할 필요 없다.
+    fun read(@RequestParam(required = false) index: Int?): ResponseEntity<Any?> {
+        // Index 있을 경우
+        return index?.let {
+            todoService.read(it)
+        }?.let {
+            return ResponseEntity.ok(it)
+        }   // Index 없는 경우
+            ?: kotlin.run {
+                return ResponseEntity
+                    .status(HttpStatus.MOVED_PERMANENTLY)
+                    .header(HttpHeaders.LOCATION, "/api/todo/all")
+                    .build()    // 301에러 일으켜서 readAll로 보낸다
+            }
+    }
 
+    // ReadAll(List)
+    @GetMapping(path = ["/all"])
+    fun readAll(): MutableList<TodoDto> {
+        return todoService.readAll()
     }
 
     // C
     @PostMapping(path = [""])
-    fun create(@Valid @RequestBody todoDto: TodoDto) {  // Body설계 -> Model , 들어오는 동시에 검증(Valid)
-
+    fun create(@RequestBody todoDto: TodoDto): ResponseEntity<Any> {  // Body설계 -> Model , 들어오는 동시에 검증(Valid)
+        return ResponseEntity
+            .status(200)
+            .body(todoService.create(todoDto))
     }
 
     // U
-    @PutMapping(path = [""])
-    fun update(@Valid @RequestBody todoDto: TodoDto) {
-
+    @PutMapping(path = [""])    // create = 201, update = 200
+    fun update(@Valid @RequestBody todoDto: TodoDto): ResponseEntity<Any> {
+        return ResponseEntity
+            .status(201)
+            .body(todoService.update(todoDto))
     }
 
     // D
     @DeleteMapping(path = ["/{index}"])
-    fun delete(@PathVariable(name = "index") _index: Int) {
+    fun delete(@PathVariable(name = "index") _index: Int): ResponseEntity<Any> {
 
+        if (!todoService.delete(_index)) {
+            return ResponseEntity.status(500).build()
+        }
+        return ResponseEntity.ok().build()
     }
-
 }
